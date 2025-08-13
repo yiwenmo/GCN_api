@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>手動標註 - GCN Arcade</title>
+  <link rel="stylesheet" type="text/css" href="/static/main.css" />
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.0/themes/base/jquery-ui.css">
+  <style>
+    body {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: #f5f5f5;
+    }
+    
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    
+    #annotation-container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    #annotation-box {
+      width: 100%;
+      min-height: 500px;
+      position: relative;
+      margin-bottom: 20px;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .ximg {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    
+    #status-message {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: center;
+      display: none;
+    }
+    
+    .success { background-color: #e6f7e6; color: #1e7e1e; }
+    .error { background-color: #fce4e4; color: #c53929; }
+    .info { background-color: #f0f7ff; color: #1890ff; }
+    
+    .instructions {
+      background-color: #f0f7ff;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      border-left: 4px solid #1890ff;
+    }
+    
+    .xlabel {
+      position: absolute !important;
+      border: 2px solid #2196F3 !important;
+      background-color: rgba(33, 150, 243, 0.15) !important;
+      cursor: move !important;
+      min-width: 30px !important;
+      min-height: 30px !important;
+      z-index: 10 !important;
+    }
+    
+    .xlabel.original-bbox {
+      border-color: #FFA500 !important;
+      background-color: rgba(255, 165, 0, 0.15) !important;
+    }
+    
+    .xlabel.selected {
+      border-color: #FF4081 !important;
+      background-color: rgba(255, 64, 129, 0.2) !important;
+      border-width: 3px !important;
+    }
+    
+    .xlabel:hover {
+      border-color: #FF4081 !important;
+      background-color: rgba(255, 64, 129, 0.15) !important;
+    }
+    
+    .ui-resizable-handle {
+      position: absolute !important;
+      display: block !important;
+      z-index: 100 !important;
+    }
+    
+    #debug-info {
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 4px;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      margin-right: 10px;
+    }
+    
+    .checkbox-wrapper input {
+      margin-right: 5px;
+    }
+    
+    .button {
+      padding: 8px 16px;
+      border: none;
+      background-color: #2196F3;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .button:hover {
+      background-color: #0b7dda;
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.min.js"></script>
+</head>
+<body>
+  <h2>手動標註框選</h2>
+  
+  <!-- 隐藏元素，存储服务器传递的现有边界框数据 -->
+  <div id="existing-bboxes" style="display:none;" data-bboxes="{{ existing_bboxes | safe if existing_bboxes else '' }}"></div>
+  
+  <div class="instructions">
+    <h3>使用說明</h3>
+    <ol>
+      <li><strong>橙色框框</strong>是原始檢測到的邊界框（可選擇保留或修改）</li>
+      <li>在圖片上<strong>雙擊</strong>添加新的邊界框（藍色）</li>
+      <li>使用滑鼠<strong>拖曳邊界框的邊緣</strong>來調整大小</li>
+      <li>將滑鼠<strong>移動到框上</strong>後可以拖動整個框的位置</li>
+      <li>點擊框可<strong>選擇</strong>它，按<strong>Delete鍵</strong>可刪除選中的框</li>
+      <li>完成標註後，點擊「儲存標註」按鈕</li>
+    </ol>
+  </div>
+  
+  <div id="annotation-container">
+    <div id="annotation-box">
+      <div class="ximg" id="annotation-area"></div>
+    </div>
+    
+    <div id="status-message"></div>
+    <div id="debug-info"></div>
+    
+    <div class="controls">
+      <div class="checkbox-wrapper">
+        <input type="checkbox" id="show-original-bboxes" checked>
+        <label for="show-original-bboxes">顯示原始檢測框</label>
+      </div>
+      <button id="reset-annotation" class="button">重設所有框框</button>
+      <button id="save-annotation" class="button">儲存標註</button>
+      <button id="cancel-annotation" class="button" onclick="window.close()">取消</button>
+    </div>
+  </div>
+  
+  <script>
+    // Display message function
+    function showMessage(message, type) {
+      const msg = $('#status-message');
+      msg.removeClass('success error info').addClass(type || 'info');
+      msg.text(message);
+      msg.css('display', message ? 'block' : 'none');
+    }
+    
+    // Show debug info
+    function debugLog(text) {
+      $('#debug-info').text(text);
+    }
+    
+    // Get URL parameters
+    function getUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        filename: params.get('filename'),
+        filepath: params.get('filepath'),
+        jsonPath: params.get('json_path')
+      };
+    }
+    
+    // Add bounding box
+    function addBoundingBox(x, y, width, height, isOriginal = false) {
+      const container = $('#annotation-area');
+      
+      // Create bounding box element
+      const boxElement = $('<div></div>')
+        .addClass('xlabel')
+        .css({
+          left: x + 'px',
+          top: y + 'px',
+          width: width + 'px',
+          height: height + 'px'
+        })
+        .appendTo(container);
+      
+      // Add class for original bounding box
+      if (isOriginal) {
+        boxElement.addClass('original-bbox');
+      }
+      
+      // Make box draggable
+      boxElement.draggable({
+        containment: 'parent', // Restrict to parent
+        stop: function() {
+          updateBoxes();
+        }
+      });
+      
+      // Make box resizable
+      boxElement.resizable({
+        containment: 'parent', // restrict to parent
+        minWidth: 30,  // minimum width
+        minHeight: 30, // minimum height
+        handles: 'all',
+        stop: function() {
+          updateBoxes();
+        }
+      });
+      
+      updateBoxes();
+      
+      return boxElement;
+    }
+    
+    // Load existing bounding boxes
+    function loadExistingBboxes() {
+      const existingBboxesData = $('#existing-bboxes').data('bboxes');
+      if (!existingBboxesData) return;
+      
+      const container = $('#annotation-area');
+      const containerWidth = container.width();
+      const containerHeight = container.height();
+      
+      // split the string into lines
+      existingBboxesData.split('\n').forEach(line => {
+        if (!line.trim()) return;
+        
+        const values = line.trim().split(' ');
+        if (values.length < 5) return;
+        
+        const classId = parseInt(values[0]);
+        const centerX = parseFloat(values[1]);
+        const centerY = parseFloat(values[2]);
+        const width = parseFloat(values[3]);
+        const height = parseFloat(values[4]);
+        
+        // calculate pixel coordinates based on container dimensions
+        const pixelX = centerX * containerWidth;
+        const pixelY = centerY * containerHeight;
+        const pixelWidth = width * containerWidth;
+        const pixelHeight = height * containerHeight;
+        
+        // add the original bounding box
+        addBoundingBox(
+          pixelX - pixelWidth/2, 
+          pixelY - pixelHeight/2, 
+          pixelWidth, 
+          pixelHeight, 
+          true
+        );
+      });
+      
+      debugLog('已加入原始邊界框: ' + existingBboxesData.split('\n').length + ' 個');
+    }
+    
+    // update all bounding boxes
+    function updateBoxes() {
+      const boxes = [];
+      const container = $('#annotation-area');
+      const containerWidth = container.width();
+      const containerHeight = container.height();
+      
+      // only update visible boxes
+      $('.xlabel:visible').each(function() {
+        const $box = $(this);
+        const pos = $box.position();
+        
+        // get bounding box coordinates
+        const left = pos.left;
+        const top = pos.top;
+        const width = $box.width();
+        const height = $box.height();
+        
+        // normalize to [0,1]
+        const centerX = (left + width / 2) / containerWidth;
+        const centerY = (top + height / 2) / containerHeight;
+        const normalizedWidth = width / containerWidth;
+        const normalizedHeight = height / containerHeight;
+        
+        
+        const validX = Math.min(Math.max(centerX, 0), 1);
+        const validY = Math.min(Math.max(centerY, 0), 1);
+        const validWidth = Math.min(Math.max(normalizedWidth, 0), 1);
+        const validHeight = Math.min(Math.max(normalizedHeight, 0), 1);
+        
+        boxes.push({
+          class: 0,
+          centerX: validX.toFixed(6),
+          centerY: validY.toFixed(6),
+          width: validWidth.toFixed(6),
+          height: validHeight.toFixed(6)
+        });
+      });
+      
+      // update bbox data
+      if (boxes.length > 0) {
+        window.bboxData = boxes.map(box => 
+          `${box.class} ${box.centerX} ${box.centerY} ${box.width} ${box.height}`
+        ).join('\n');
+        
+        debugLog('更新標註框資訊: ' + boxes.length + ' 個框');
+      } else {
+        window.bboxData = '';
+        debugLog('沒有標註框');
+      }
+      
+      return window.bboxData;
+    }
+    
+    // initialize annotation
+    function setupAnnotation(imageUrl) {
+      // load image
+      const img = new Image();
+      
+      img.onload = function() {
+        const container = $('#annotation-area');
+        const box = $('#annotation-box');
+        
+        // calculate appropriate size
+        const maxWidth = box.width();
+        const maxHeight = 600;
+        
+        const scale = Math.min(
+          maxWidth / this.width,
+          maxHeight / this.height,
+          1
+        );
+        
+        const width = Math.floor(this.width * scale);
+        const height = Math.floor(this.height * scale);
+        
+        // set container style
+        container.css({
+          'width': width + 'px',
+          'height': height + 'px',
+          'background-image': 'url(' + imageUrl + ')',
+          'background-size': 'contain',
+          'background-position': 'center',
+          'background-repeat': 'no-repeat',
+          'margin': '0 auto'
+        });
+        
+        // add double click event
+        container.dblclick(function(e) {
+          const offset = $(this).offset();
+          const x = e.pageX - offset.left;
+          const y = e.pageY - offset.top;
+          
+          //add bounding box
+          addBoundingBox(x - 50, y - 50, 100, 100, false);
+        });
+        
+        // after image is loaded, load existing bboxes
+        loadExistingBboxes();
+        
+        showMessage('', '');
+      };
+      
+      img.onerror = function() {
+        showMessage('圖片載入失敗', 'error');
+      };
+      
+      showMessage('載入圖片中...', 'info');
+      img.src = imageUrl;
+    }
+    
+    // save annotation
+    async function saveAnnotation() {
+      if (!window.bboxData || window.bboxData.trim() === '') {
+        showMessage('請先繪製至少一個邊界框', 'error');
+        return;
+      }
+      
+      const params = getUrlParams();
+      if (!params.filename || !params.jsonPath) {
+        showMessage('缺少必要參數', 'error');
+        return;
+      }
+      
+      try {
+        showMessage('儲存中...', 'info');
+        
+        // translate bboxes to YOLO format
+        const yoloData = window.bboxData.split('\n')
+          .filter(line => line.trim())
+          .map(line => line + ' 0.6')  // add confidence score
+          .join('\n');
+        
+        debugLog('儲存的YOLO數據: ' + yoloData);
+        
+        // save bboxes
+        const saveResponse = await fetch('/api/update-bbox', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: params.filename,
+            bboxes: yoloData
+          })
+        });
+        
+        if (!saveResponse.ok) {
+          const errorData = await saveResponse.json();
+          throw new Error(errorData.error || '儲存邊界框失敗');
+        }
+        
+        showMessage('儲存成功，進行 GCN 處理中...', 'success');
+        
+        // send message to parent window, notify that annotation has been saved and GCN is being processed
+        if (window.opener && !window.opener.closed) {
+          console.log('sending message to parent window');
+          window.opener.postMessage({
+            type: 'refresh_gcn_results',
+            filename: params.filename,
+            status: 'success',
+            timestamp: new Date().getTime()
+          }, '*');
+        }
+        
+        // prevent immediate close the window, allowing the user to see the success message
+        setTimeout(function() {
+          showMessage('處理完成，2秒後關閉視窗...', 'success');
+          
+          setTimeout(function() {
+            window.close();
+          }, 2000);
+        }, 1000);
+        
+      } catch (error) {
+        console.error('儲存失敗:', error);
+        showMessage('儲存失敗: ' + error.message, 'error');
+      }
+    }
+
+    // document ready
+    $(document).ready(function() {
+      const params = getUrlParams();
+      
+      if (!params.filename) {
+        showMessage('缺少必要參數', 'error');
+        return;
+      }
+      
+      // get image URL
+      const imageUrl = `/api/annotation-image?filename=${encodeURIComponent(params.filename)}`;
+      
+      setupAnnotation(imageUrl);
+      
+      
+      $('#show-original-bboxes').change(function() {
+        if ($(this).is(':checked')) {
+          $('.original-bbox').show();
+        } else {
+          $('.original-bbox').hide();
+        }
+        updateBoxes();
+      });
+      
+      // setup reset button
+      $('#reset-annotation').click(function() {
+        // remove all user-added bounding boxes
+        $('#annotation-area').find('.xlabel:not(.original-bbox)').remove();
+        
+        // if show-original-bboxes is unchecked, remove all original bounding boxes
+        if (!$('#show-original-bboxes').is(':checked')) {
+          $('#annotation-area').find('.original-bbox').remove();
+        }
+        
+        updateBoxes();
+        debugLog('所有邊界框已重置');
+      });
+      
+      $('#save-annotation').click(saveAnnotation);
+      
+      // add click event to bounding boxes
+      $(document).on('click', '.xlabel', function(e) {
+        // prevent default click behavior
+        e.stopPropagation();
+        // first remove all selected classes
+        $('.xlabel').removeClass('selected');
+        // add selected class
+        $(this).addClass('selected');
+      });
+      
+      // disable click event on annotation-area
+      $('#annotation-area').click(function() {
+        $('.xlabel').removeClass('selected');
+      });
+      
+      // add keydown event
+      $(document).keydown(function(e) {
+        // (Delete 或 Backspace)
+        if (e.keyCode === 46 || e.keyCode === 8) {
+          // only delete if there are selected boxes
+          if ($('.xlabel.selected').length > 0) {
+            $('.xlabel.selected').remove();
+            updateBoxes();
+            return false;
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

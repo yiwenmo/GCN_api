@@ -1,0 +1,71 @@
+{% extends "base.html" %} {% block content %}
+
+<div class="main">
+  
+  <div class="title">
+    <h3>GCN - Arcade Prediction</h3>
+  </div>
+
+  <div class="panel">
+    <input id="file-upload" class="hidden" type="file" accept="image/x-png,image/gif,image/jpeg,,image/jpg" />
+    <label for="file-upload" id="file-drag" class="upload-box">
+      <div id="upload-caption">將圖片拖曳到這裡或點選上傳檔案</div>
+      <img id="image-preview" class="hidden" />
+    </label>
+  </div>
+
+  <div style="margin-bottom: 2rem;">
+    <input type="button" value="上傳" class="button" onclick="submitImage();" />
+    <input type="button" value="清除" class="button" onclick="clearImage();" />
+    <input type="button" id="manual-annotate-btn" value="手動標註" class="button hidden" onclick="openAnnotationWindow();" />
+  </div>
+
+  <div class="results-grid">
+    <!-- 左側 Panoptic 結果 -->
+    <div class="result-container">
+      <h4>Panoptic Segmentation</h4>
+      <div class="result-box">
+        <img id="panoptic-display" class="result-image hidden" />
+        <div id="panoptic-loader" class="result-loader hidden">
+          <div class="loader-spinner"></div>
+        </div>
+        <div id="panoptic-message" class="result-message hidden"></div>
+      </div>
+    </div>
+
+    <!-- YOLOv5 結果 -->
+    <div class="result-container">
+      <h4>YOLOv5 Detection</h4>
+      <div class="result-box">
+        <!-- YOLO 結果顯示 -->
+        <img id="yolo-display" class="result-image hidden" />
+        <div id="yolo-loader" class="result-loader hidden">
+          <div class="loader-spinner"></div>
+        </div>
+        <div id="yolo-message" class="result-message hidden"></div>
+      </div>
+    </div>
+
+    <!-- 底部 GCN 結果 -->
+    <div class="result-container full-width">
+      <h4>GCN Results</h4>
+      <div class="result-box">
+        <img id="gcn-display" class="result-image hidden" />
+        <div id="gcn-loader" class="result-loader hidden">
+          <div class="loader-spinner"></div>
+        </div>
+        <div id="gcn-message" class="result-message hidden"></div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- <svg id="loader" class="hidden" viewBox="0 0 32 32" width="32" height="32">
+    <circle id="spinner" cx="16" cy="16" r="14" fill="none"></circle>
+  </svg>
+   -->
+</div>
+
+
+{% endblock %}

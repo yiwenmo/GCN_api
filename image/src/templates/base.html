@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>GCN Arcade</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- 添加以下函式庫 -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sprintf-js@1.1.2/dist/sprintf.min.js"></script>
+    <!-- 原有的 CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='main.css') }}" />
+  </head>
+  <body>
+    {% block content %}{% endblock %}
+  </body>
+  <footer>
+    <script src="{{ url_for('static',filename='labeling.js') }}"></script>
+    <script src="{{ url_for('static',filename='main.js') }}"></script>
+    <!-- 修改 base.html 中的引入方式 -->
+    <script type="module">
+      import { initializeImageDisplay, displayToOriginalCoords, convertToYoloBBox } from "{{ url_for('static', filename='image-scaling.js') }}";
+      window.initializeImageDisplay = initializeImageDisplay;
+      window.displayToOriginalCoords = displayToOriginalCoords;
+      window.convertToYoloBBox = convertToYoloBBox;
+    </script>
+</footer>
+</html>

@@ -1,0 +1,12 @@
+# model weight
+image/models/*
+auth
+
+# scene graph weight
+image/src/GCN_arcade/best_model_node_200epochs_GCN64_bn_128batch_final_4spr.pth
+
+# mac
+.DS_Store
+
+# kubectl
+deploy.sh

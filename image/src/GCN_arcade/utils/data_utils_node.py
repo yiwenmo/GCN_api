@@ -1,0 +1,240 @@
+'''
+Utilities for handling data related tasks.
+
+This module contains functions and classes for reading and processing Arcade data
+used in Graph Neural Networks (GNNs).
+
+Input with several txt files and output three pt files.
+
+Author: MO, YI WEN
+Date: 2024/4/29
+'''
+
+import os
+import os.path as osp
+
+import torch
+import glob
+import numpy as np
+
+from torch_geometric.data import Data
+from torch_geometric.io import read_txt_array
+from torch_geometric.utils import coalesce, cumsum, one_hot, remove_self_loops, subgraph
+from torch_geometric.data import InMemoryDataset
+
+
+
+names = [
+    'A', 'graph_indicator', 'node_labels', 'node_attributes_encoded'
+    'edge_labels', 'edge_attributes_encoded', 'graph_labels', 'graph_attributes'
+]
+
+
+def read_data(folder, prefix):
+    files = glob.glob(osp.join(folder, f'{prefix}_*.txt'))
+    names = [f.split(os.sep)[-1][len(prefix) + 1:-4] for f in files]
+
+    edge_index = read_file(folder, prefix, 'A', torch.long).t() - 1
+    batch = read_file(folder, prefix, 'graph_indicator', torch.long) - 1
+
+    node_attributes = torch.empty((batch.size(0), 0))
+    if 'node_attributes_encoded' in names:
+        node_attributes = read_file(folder, prefix, 'node_attributes_encoded')
+        if node_attributes.dim() == 1:
+            node_attributes = node_attributes.unsqueeze(-1)
+
+    # node_labels = torch.empty((batch.size(0), 0))
+    # if 'node_labels' in names:
+    #     node_labels = read_file(folder, prefix, 'node_labels', torch.long)
+    #     if node_labels.dim() == 1:
+    #         node_labels = node_labels.unsqueeze(-1)
+    #     node_labels = node_labels - node_labels.min(dim=0)[0]
+    #     node_labels = node_labels.unbind(dim=-1)
+    #     node_labels = [one_hot(x) for x in node_labels]
+    #     if len(node_labels) == 1:
+    #         node_labels = node_labels[0]
+    #     else:
+    #         node_labels = torch.cat(node_labels, dim=-1)
+
+    edge_attributes = torch.empty((edge_index.size(1), 0))
+    if 'edge_attributes_encoded' in names:
+        edge_attributes = read_file(folder, prefix, 'edge_attributes_encoded')
+        if edge_attributes.dim() == 1:
+            edge_attributes = edge_attributes.unsqueeze(-1)
+
+    edge_labels = torch.empty((edge_index.size(1), 0))
+    if 'edge_labels' in names:
+        edge_labels = read_file(folder, prefix, 'edge_labels', torch.long)
+        if edge_labels.dim() == 1:
+            edge_labels = edge_labels.unsqueeze(-1)
+        edge_labels = edge_labels - edge_labels.min(dim=0)[0]
+        edge_labels = edge_labels.unbind(dim=-1)
+        edge_labels = [one_hot(e) for e in edge_labels]
+        if len(edge_labels) == 1:
+            edge_labels = edge_labels[0]
+        else:
+            edge_labels = torch.cat(edge_labels, dim=-1)
+
+    # x = cat([node_attributes, node_labels])
+    x = node_attributes
+    edge_attr = cat([edge_attributes, edge_labels])
+
+    y = None
+    if 'graph_attributes' in names:  # Regression problem.
+        y = read_file(folder, prefix, 'graph_attributes')
+    elif 'node_labels' in names:  # Classification problem.
+        y = read_file(folder, prefix, 'node_labels', torch.long)
+        # y = read_file(folder, prefix, 'node_labels')
+        _, y = y.unique(sorted=True, return_inverse=True) # 每個數值+1，從0開始起算
+
+    num_nodes = edge_index.max().item() + 1 if x is None else x.size(0)
+    edge_index, edge_attr = remove_self_loops(edge_index, edge_attr)
+    edge_index, edge_attr = coalesce(edge_index, edge_attr, num_nodes)
+
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+    data, slices = split(data, batch)
+
+    sizes = {
+        'num_node_attributes': node_attributes.size(-1),
+        # 'num_node_labels': node_labels.size(-1),
+        'num_edge_attributes': edge_attributes.size(-1),
+        'num_edge_labels': edge_labels.size(-1),
+    }
+
+    return data, slices, sizes
+
+
+def read_file(folder, prefix, name, dtype=None):
+    path = osp.join(folder, f'{prefix}_{name}.txt')
+    return read_txt_array(path, sep=',', dtype=dtype)
+
+def cat(seq):
+    seq = [item for item in seq if item is not None]
+    seq = [item for item in seq if item.numel() > 0]
+    seq = [item.unsqueeze(-1) if item.dim() == 1 else item for item in seq]
+    return torch.cat(seq, dim=-1) if len(seq) > 0 else None
+
+
+def split(data, batch):
+    node_slice = cumsum(torch.from_numpy(np.bincount(batch)))
+
+    row, _ = data.edge_index
+    edge_slice = cumsum(torch.from_numpy(np.bincount(batch[row])))
+
+    # Edge indices should start at zero for every graph.
+    data.edge_index -= node_slice[batch[row]].unsqueeze(0)
+
+    slices = {'edge_index': edge_slice}
+    if data.x is not None:
+        slices['x'] = node_slice
+    else:
+        # Imitate `collate` functionality:
+        data._num_nodes = torch.bincount(batch).tolist()
+        data.num_nodes = batch.numel()
+    if data.edge_attr is not None:
+        slices['edge_attr'] = edge_slice
+    if data.y is not None:
+        if data.y.size(0) == batch.size(0):
+            slices['y'] = node_slice
+        else:
+            slices['y'] = torch.arange(0, batch[-1] + 2, dtype=torch.long)
+
+    return data, slices
+
+
+# 2024/11/20 edited
+class CustomDataset(InMemoryDataset):
+    def __init__(self, root, filepath, name='Arcade', use_edge_attr=True, 
+                 transform=None, pre_transform=None, pre_filter=None):
+        self.name = name
+        self.root = root
+        self.filepath = filepath
+        if not os.path.exists(self.filepath):
+            raise FileNotFoundError(f"The filepath '{self.filepath}' does not exist.")
+        self.filenames = os.listdir(filepath)
+        self.use_edge_attr = use_edge_attr
+        
+
+        self._cleanup_processed_files()
+        os.makedirs(self.processed_dir, exist_ok=True)
+
+        super().__init__(root, transform, pre_transform, pre_filter)
+        
+        
+        self.process()
+        self.data, self.slices = torch.load(self.processed_paths[0], map_location=torch.device('cpu'))
+    
+    def _cleanup_processed_files(self):
+        """cleanup files that are exist in processed_dir"""
+        try:
+            # clear processed directory
+            if hasattr(self, 'processed_dir') and os.path.exists(self.processed_dir):
+                for file in os.listdir(self.processed_dir):
+                    file_path = os.path.join(self.processed_dir, file)
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                        print(f"Removed processed file: {file_path}")
+                
+                # try to remove processed directory
+                try:
+                    os.rmdir(self.processed_dir)
+                    print(f"Removed processed directory: {self.processed_dir}")
+                except OSError:
+                    print(f"Could not remove directory {self.processed_dir} (might not be empty)")
+            
+            # clear pt directory
+            pt_dir = os.path.join(self.root, 'pt', self.name)
+            if os.path.exists(pt_dir):
+                for file in os.listdir(pt_dir):
+                    if file.endswith('.pt'):
+                        file_path = os.path.join(pt_dir, file)
+                        os.remove(file_path)
+                        print(f"Removed .pt file: {file_path}")
+        
+        except Exception as e:
+            print(f"Error during cleanup: {str(e)}")
+
+    @property
+    def raw_dir(self):
+        return self.filepath
+
+    @property
+    def processed_dir(self):
+        return os.path.join(self.root, self.name)
+
+    @property
+    def raw_file_names(self):
+        return self.filenames
+
+    @property
+    def processed_file_names(self):
+        return ['data.pt']
+
+    def download(self):
+        pass
+
+    def process(self):
+        """
+        process data and save to processed_dir
+        """
+        print(f"Processing data from {self.raw_dir}...")
+        
+        # create processed_dir
+        os.makedirs(self.processed_dir, exist_ok=True)
+        
+        # process
+        self.data, self.slices, _ = read_data(self.raw_dir, 'Arcade')
+
+        if self.pre_filter is not None:
+            data_list = [self.get(idx) for idx in range(len(self))]
+            data_list = [data for data in data_list if self.pre_filter(data)]
+            self.data = data_list
+
+        if self.pre_transform is not None:
+            data_list = [self.get(idx) for idx in range(len(self))]
+            data_list = [self.pre_transform(data) for data in data_list]
+            self.data = data_list
+
+        print(f"Saving processed data to {self.processed_paths[0]}...")
+        torch.save((self.data, self.slices), self.processed_paths[0])
+        print("Data processing completed.")

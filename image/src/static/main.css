@@ -1,0 +1,630 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+      Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background-color: #f0f2f5;
+  }
+  
+  /* Global button style */
+  .button {
+    font-family: inherit;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    outline: none;
+    color: #ffffff;
+    background-color: #1890ff;;
+    padding: 0.5rem 1.2rem;
+    border-radius: 2px;
+    font-size: 1rem;
+    min-width: 6rem;
+  }
+  
+  .button:hover {
+    background-color: #40a9ff;;
+  }
+  
+  .button.disabled {
+    pointer-events: none;
+    background-color: #cccccc;
+    color: #666666;
+  }
+  
+  /* Main section */
+  
+  /* .main {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  } */
+  
+  .main {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .main .title h3 {
+    font-size: 2.3rem;
+    font-weight: 300;
+    margin: 0.8rem 0;
+    color: #1f1f1f;
+    text-align: center;
+  }
+  
+  .hidden {
+    display: none !important;
+  }
+  
+  .reveal {
+    opacity: 0;
+  }
+  
+  .reveal:hover {
+    opacity: 0.2;
+  }
+  
+  /* Upload box */
+  .upload-box {
+    font-size: 0.9rem;
+    color: #595959;
+    cursor: pointer;
+    width: 20rem;
+    height: 15rem;
+    background: #ffffff;
+    border: 2px dashed #d9d9d9;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin: 1rem 0 2rem 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+  
+  .upload-box.dragover {
+    /* background-color: grey; */
+    background-color: #f0f7ff;
+    color: #1890ff;
+    border: 0.1rem solid rgb(212, 53, 0);
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  }
+  
+  .upload-box:hover {
+    border-color: rgb(0, 120, 212);
+  }
+  
+  .upload-box #image-preview {
+    max-width: 14rem;
+    max-height: 8rem;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.2), 0 6px 10px 0 rgba(0, 0, 0, 0.19);
+  }
+
+  /* Results section */
+  .results-container {
+    margin-top: 20px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 20px;
+    width: 100%;
+    margin-top: 2rem;
+  }
+
+  .result-container {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .result-container h4 {
+    color: #262626;
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+
+  .result-box {
+    background: #fafafa;
+    border-radius: 6px;
+    min-height: 200px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border: 1px solid #f0f0f0;
+    overflow: hidden;
+  }
+
+  /* annotation update */
+  /* .result-box {
+    background: #fafafa;
+    border-radius: 6px;
+    min-height: 400px;
+    padding: 0;      
+    position: relative;
+    border: 1px solid #f0f0f0;
+    overflow: hidden;
+  } */
+
+  .result-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 4px;
+  }
+
+  .result-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #6b7280;
+    background-color: #f3f4f6;  
+    padding: 12px 20px;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.95rem;
+    border: 1px solid #e5e7eb;  
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .result-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .result-loader circle {
+    box-sizing: border-box;
+    stroke: #1890ff;
+    stroke-width: 3px;
+    transform-origin: 50%;
+    animation: line 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite,
+        rotate 1.6s linear infinite;
+  }
+
+  .loader-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #1890ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  .detection-results {
+    margin-top: 10px;
+  }
+  
+  .detection-results h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+  }
+  
+  .labels {
+    background: #f5f5f5;
+    padding: 10px;
+    border-radius: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: monospace;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+  
+  img#image-display {
+    max-width: 100%;
+    height: auto;
+    margin: 20px auto;
+    display: block;
+    border-radius: 4px;
+  }
+  
+  #image-result {
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    max-height: 20rem;
+  }
+  
+  #image-box {
+    position: relative;
+    width: auto;
+    float: left;
+    margin-bottom: 2rem;
+  }
+  
+  #image-display {
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    max-height: 20rem;
+  }
+  
+  #image-display.loading {
+    filter: brightness(100%);
+  }
+  
+  #pred-result {
+    color: white;
+    font-size: 1.5rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  
+  #loader {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    margin: 0 auto;
+  }
+  
+  /* Animation */
+  #spinner {
+    box-sizing: border-box;
+    stroke:  #1890ff;
+    stroke-width: 3px;
+    transform-origin: 50%;
+    animation: line 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite,
+      rotate 1.6s linear infinite;
+  }
+  @keyframes rotate {
+    from {
+      transform: rotate(0);
+    }
+    to {
+      transform: rotate(450deg);
+    }
+  }
+  @keyframes line {
+    0% {
+      stroke-dasharray: 2, 85.964;
+      transform: rotate(0);
+    }
+    50% {
+      stroke-dasharray: 65.973, 21.9911;
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dasharray: 2, 85.964;
+      stroke-dashoffset: -65.973;
+      transform: rotate(90deg);
+    }
+  }
+
+
+/* 加載動畫樣式 */
+  #loader {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+  }
+
+  #spinner {
+    box-sizing: border-box;
+    stroke: #cccccc;
+    stroke-width: 3px;
+    transform-origin: 50%;
+    animation: line 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite,
+        rotate 1.6s linear infinite;
+  }
+
+  /* 響應式設計 */
+  /* @media (max-width: 768px) {
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .result-container {
+        margin-bottom: 20px;
+    }
+  } */
+
+  @media (max-width: 768px) {
+    .result-box {
+        min-height: 300px;
+    }
+    
+    .annotation-controls .button {
+        min-width: 80px;
+        padding: 6px 12px;
+    }
+  }
+
+
+  /* manual annotation */
+  .xlabel {
+    position: absolute;
+    border: 2px solid #2196F3;
+    background-color: rgba(33, 150, 243, 0.15);
+    cursor: move;
+    min-width: 30px;
+    min-height: 30px;
+    z-index: 10;
+    box-sizing: border-box;
+  }
+
+  .xlabel:hover {
+      border-color: #FF4081;
+      background-color: rgba(255, 64, 129, 0.15);
+  }
+
+  
+  .ximg {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+
+  .ximg img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .annotation-controls {
+    padding: 10px;
+    background: #f5f5f5;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+  
+  .annotation-controls .button {
+    min-width: 100px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .annotation-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .annotation-header {
+    padding: 12px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+  }
+
+
+  .annotation-area {
+    position: relative;
+    width: 100%;
+    height: calc(100% - 120px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #fafafa;
+    overflow: hidden;
+    padding: 20px;
+  }
+
+  /* 修改手動標註容器樣式 */
+  #draw-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+  }
+
+  /* 調整訊息顯示樣式 */
+  #yolo-message {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 8px 16px;
+    border-radius: 4px;
+    z-index: 11;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  /* 大螢幕 (1200px 以上) */
+  @media screen and (min-width: 1200px) {
+    .results-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+    }
+
+    .result-box {
+        min-height: 400px;
+    }
+  }
+
+  /* 平板電腦 (768px - 1199px) */
+  @media screen and (max-width: 1199px) {
+    .results-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .result-box {
+        min-height: 350px;
+    }
+
+    .main .title h3 {
+        font-size: 2rem;
+    }
+
+    .upload-box {
+        width: 90%;
+        max-width: 400px;
+    }
+  }
+
+  /* 手機設備 (767px 以下) */
+  @media screen and (max-width: 767px) {
+    .results-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .result-box {
+        min-height: 300px;
+    }
+
+    .main .title h3 {
+        font-size: 1.8rem;
+    }
+
+    .upload-box {
+        width: 100%;
+        height: 12rem;
+    }
+
+    .button {
+        padding: 0.4rem 1rem;
+        font-size: 0.9rem;
+        min-width: 5rem;
+    }
+
+    .result-container {
+        padding: 1rem;
+    }
+
+    .result-image {
+        max-height: 250px;
+    }
+
+    /* 調整手動標註介面 */
+    .annotation-controls {
+      padding: 12px;
+      background: #f5f5f5;
+      border-top: 1px solid #ddd;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .annotation-controls .button {
+        min-width: 80px;
+        padding: 6px 12px;
+        font-size: 0.9rem;
+    }
+
+    .annotation-header {
+        padding: 8px;
+        font-size: 0.9rem;
+    }
+  }
+
+  /* 小螢幕手機 (480px 以下) */
+  @media screen and (max-width: 480px) {
+    .main {
+        padding: 0 10px;
+    }
+
+    .main .title h3 {
+        font-size: 1.5rem;
+    }
+
+    .result-box {
+        min-height: 250px;
+        padding: 0.5rem;
+    }
+
+    .result-container {
+        padding: 0.8rem;
+    }
+
+    .result-image {
+        max-height: 200px;
+    }
+
+    /* 上傳框調整 */
+    .upload-box {
+        height: 10rem;
+    }
+
+    .upload-box #image-preview {
+        max-width: 90%;
+        max-height: 7rem;
+    }
+
+    /* 按鈕樣式調整 */
+    .button {
+        padding: 0.3rem 0.8rem;
+        font-size: 0.85rem;
+        min-width: 4.5rem;
+    }
+  }
+
+  /* 確保全寬元素在所有尺寸下都是全寬 */
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  /* 確保圖片響應式 */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* 調整載入動畫位置 */
+  .result-loader {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
