@@ -196,7 +196,18 @@ class ArcadeDetector:
         with open(image_path, "rb") as img:
             form_data = {"file": img}
             response = self.session.post(url=url, auth=auth, files=form_data, timeout=60)
-            return response.json()
+
+            # 2025/8/14 add
+            response.raise_for_status()
+            try:
+                data = response.json()
+            except ValueError as e:
+                raise RuntimeError(f"Arcade returned non-JSON: {response.text[:200]}") from e
+            required = {"image", "image1", "labels"}
+            missing = [k for k in required if k not in data]
+            if missing:
+                raise KeyError(f"Arcade JSON missing keys: {missing}; got keys={list(data.keys())}")
+            return data
     def save_detection_results(self, arcade_json, output_base_path):
         """Save detection results to output folder"""
         try:

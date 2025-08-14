@@ -155,7 +155,12 @@ def process_yolo():
         # YOLOv5 detection
         app.logger.info("Starting YOLOv5 detection...")
         detector = ArcadeDetector()
+
         arcade_json = detector.detect_arcade(filepath)
+        app.logger.info(f"detect_arcade keys: {list(arcade_json.keys())}")
+    
+
+        # source, arcade_json = detector.detect_arcade(filepath)
         output_base_path = os.path.join(OUTPUT_FOLDER, os.path.splitext(filename)[0])
         yolo_labels = detector.save_detection_results(arcade_json, output_base_path)
         
@@ -649,12 +654,11 @@ def update_bbox():
         return jsonify({'error': str(e), 'stack_trace': stack_trace}), 500
 
 
-# 添加新的路由來獲取圖片檔案
+# add new route for original image
 @app.route('/host_upload/<filename>', methods=['GET'])
 def get_upload_image(filename):
     """提供上傳的原始圖片"""
     try:
-        # 安全處理檔名
         filename = secure_filename(filename)
         filepath = os.path.join('host_upload', filename)
         
@@ -667,15 +671,14 @@ def get_upload_image(filename):
         app.logger.error(f'獲取圖片時發生錯誤: {str(e)}')
         return jsonify({'error': str(e)}), 500
 
-# 添加新的路由來獲取標註用的圖片
+# add new route
 @app.route('/api/get-image/<filename>', methods=['GET'])
 def get_image_by_name(filename):
     """提供標註用的原始圖片 (路徑參數版本)"""
     try:
-        # 安全處理檔名
         filename = secure_filename(filename)
         
-        # 嘗試從多個可能的位置尋找圖片
+        # find multiple possible paths
         possible_paths = [
             os.path.join('host_upload', filename),
             os.path.join(UPLOAD_FOLDER, filename),
@@ -684,7 +687,7 @@ def get_image_by_name(filename):
             os.path.join(app.static_folder, 'output', filename)
         ]
         
-        # 尋找存在的圖片路徑
+        # find path
         image_path = None
         for path in possible_paths:
             if os.path.exists(path):
@@ -704,17 +707,16 @@ def get_image_by_name(filename):
 
 @app.route('/api/annotation-image', methods=['GET'])
 def get_annotation_image_by_query():
-    """直接提供標註用的原始圖片 (查詢參數版本)"""
+
     try:
         filename = request.args.get('filename')
         if not filename:
             return jsonify({'error': '缺少filename參數'}), 400
             
-        # 安全處理檔名
+        
         filename = secure_filename(filename)
         app.logger.info(f"請求標註圖片: {filename}")
         
-        # 嘗試從多個可能的位置尋找圖片
         possible_paths = [
             os.path.join('host_upload', filename),
             os.path.join(UPLOAD_FOLDER, filename),
@@ -723,7 +725,7 @@ def get_annotation_image_by_query():
             os.path.join(app.static_folder, 'output', filename)
         ]
         
-        # 尋找存在的圖片路徑
+        # find existing image
         for path in possible_paths:
             app.logger.info(f"嘗試圖片路徑: {path}")
             if os.path.exists(path):

@@ -15,8 +15,19 @@ RUN python -m pip install Flask gevent requests urllib3 && \
 
 RUN pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.13.0+cu117.html
 
+
+RUN pip uninstall -y backports && \
+    pip install backports.tarfile || true
+
+
 # Install Detectron2
 RUN python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
+
+
+# install Yolov5
+# RUN git clone https://github.com/ultralytics/yolov5.git /workspace/Mask2Former/yolov5 && \
+#     pip install -r /workspace/Mask2Former/yolov5/requirements.txt
+
 
 # Install Mask2Former
 RUN git clone https://github.com/facebookresearch/Mask2Former.git && \
